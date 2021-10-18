@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
 	
 	spec.files = Dir.glob('{lib}/**/*', File::FNM_DOTMATCH, base: __dir__)
 	
-	spec.add_dependency "traces"
+	spec.add_dependency "traces", "~> 0.4.0"
 	spec.add_dependency "opentelemetry-api"
 	
 	spec.add_development_dependency "rspec", "~> 3.0"

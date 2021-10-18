@@ -10,6 +10,12 @@ A backend for sending traces to OpenTelemetry.
 $ bundle add traces-backend-open_telemetry
 ```
 
+## Usage
+
+``` shell
+$ TRACES_BACKEND=traces/backend/open_telemetry ./my_script.rb
+```
+
 ## Contributing
 
 We welcome contributions to this project.
