@@ -21,21 +21,12 @@ jobs:
         
         experimental: [false]
         env:
-          - "TRACE_BACKEND=console"
-          - "TRACE_BACKEND=datadog"
+          - "TRACES_BACKEND=traces/backend/open_telemetry"
         
         include:
           - os: ubuntu
-            ruby: truffleruby
-            env: "TRACE_BACKEND=test"
-            experimental: true
-          - os: ubuntu
-            ruby: jruby
-            env: "TRACE_BACKEND=test"
-            experimental: true
-          - os: ubuntu
             ruby: head
-            env: "TRACE_BACKEND=test"
+            env: "TRACES_BACKEND=traces/backend/open_telemetry"
             experimental: true
     
     steps:

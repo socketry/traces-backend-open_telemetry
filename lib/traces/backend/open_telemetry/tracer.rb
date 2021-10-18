@@ -20,52 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-require 'traces/context'
-require_relative 'open_telemetry/tracer'
+require 'opentelemetry'
+
+require_relative 'version'
 
 module Traces
 	module Backend
 		module OpenTelemetry
-			def trace(name, parent = nil, attributes: nil, &block)
-				if parent
-					# Convert it to the required object:
-					parent = ::OpenTelemetry::Traces::SpanContext.new(
-						trace_id: parent.trace_id,
-						span_id: parent.span_id,
-						trace_flags: ::OpenTelemetry::Traces::TracesFlags.from_byte(parent.flags),
-						tracestate: parent.state,
-						remote: parent.remote?
-					)
-				end
-				
-				span = OpenTelemetry::TRACER.start_span(name, with_parent: parent, attributes: attributes.transform_keys(&:to_s))
-				
-				begin
-					if block.arity.zero?
-						yield
-					else
-						yield trace_span_context(span)
-					end
-				rescue Exception => error
-					span&.record_exception(error)
-					span&.status = ::OpenTelemetry::Traces::Status.error("Unhandled exception of type: #{error.class}")
-					raise
-				ensure
-					span&.finish
-				end
-			end
-			
-			def trace_span_context(span)
-				context = span.context
-				
-				return Context.new(
-					context.trace_id,
-					context.span_id,
-					context.trace_flags,
-					context.tracestate,
-					remote: context.remote?
-				)
-			end
+			# Provides a backend that writes data to OpenTelemetry.
+			# See <https://github.com/open-telemetry/opentelemetry-ruby> for more details.
+			TRACER = ::OpenTelemetry.tracer_provider.tracer(Traces::Backend::OpenTelemetry.name, Traces::Backend::OpenTelemetry::VERSION)
 		end
 	end
 end

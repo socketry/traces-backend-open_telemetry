@@ -6,7 +6,7 @@ gemspec
 
 group :test do
 	gem "console"
-	gem "ddtrace"
+	gem "opentelemetry-sdk"
 end
 
 group :maintenance, optional: true do
