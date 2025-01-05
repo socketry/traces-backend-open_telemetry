@@ -16,7 +16,7 @@ module Traces
 			TRACER = ::OpenTelemetry.tracer_provider.tracer(Traces::Backend::OpenTelemetry.name, Traces::Backend::OpenTelemetry::VERSION)
 			
 			module Interface
-				def trace(name, attributes: nil, &block)
+				def trace(name, attributes: {}, &block)
 					span = TRACER.start_span(name, attributes: attributes.transform_keys(&:to_s))
 					
 					begin
@@ -27,7 +27,7 @@ module Traces
 						end
 					rescue Exception => error
 						span&.record_exception(error)
-						span&.status = ::OpenTelemetry::Traces::Status.error("Unhandled exception of type: #{error.class}")
+						span&.status = ::OpenTelemetry::Trace::Status.error("Unhandled exception of type: #{error.class}")
 						raise
 					ensure
 						span&.finish
@@ -35,10 +35,10 @@ module Traces
 				end
 				
 				def trace_context=(context)
-					span_context = ::OpenTelemetry::Traces::SpanContext.new(
+					span_context = ::OpenTelemetry::Trace::SpanContext.new(
 						trace_id: context.trace_id,
 						span_id: context.parent_id,
-						trace_flags: ::OpenTelemetry::Traces::TracesFlags.from_byte(context.flags),
+						trace_flags: ::OpenTelemetry::Trace::TraceFlags.from_byte(context.flags),
 						tracestate: context.state,
 						remote: context.remote?
 					)
@@ -49,13 +49,18 @@ module Traces
 				end
 				
 				def trace_context(span = ::OpenTelemetry::Trace.current_span)
+					# state = baggage.values(context: span.context)
 					if span_context = span.context
-						state = baggage.values(context: span.context)
+							flags = 0
+							
+							if span_context.trace_flags.sampled?
+								flags |= Context::SAMPLED
+							end
 						
 						return Context.new(
 							span_context.trace_id,
 							span_context.span_id,
-							span_context.trace_flags,
+							flags,
 							span_context.tracestate,
 							remote: span_context.remote?
 						)
