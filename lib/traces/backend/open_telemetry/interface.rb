@@ -44,7 +44,8 @@ module Traces
 					)
 					
 					span = ::OpenTelemetry::Trace.non_recording_span(span_context)
-					
+					# the span seems to be updated correctly, and evaluating line 49 seems to propagate the trace/span ids 
+					# but its not updated in my span
 					return ::OpenTelemetry::Trace.context_with_span(span)
 				end
 				
