@@ -44,8 +44,6 @@ describe Traces::Backend::OpenTelemetry do
 	end
 	
 	it "can invoke trace wrapper" do
-		instance = MyClass.new
-		
 		expect(Traces::Backend::OpenTelemetry::TRACER).to receive(:start_span).with_options(have_keys(
 			attributes: be == {"argument" => 10}
 		))
@@ -54,16 +52,12 @@ describe Traces::Backend::OpenTelemetry do
 	end
 	
 	it "can invoke trace wrapper without attributes" do
-		instance = MyClass.new
-		
 		expect(Traces::Backend::OpenTelemetry::TRACER).to receive(:start_span)
 		
 		instance.my_method_without_attributes(10)
 	end
 	
 	it "can invoke trace wrapper with exception" do
-		instance = MyClass.new
-		
 		expect(Traces::Backend::OpenTelemetry::TRACER).to receive(:start_span)
 		
 		expect do
