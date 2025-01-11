@@ -17,7 +17,7 @@ module Traces
 			
 			module Interface
 				def trace(name, attributes: nil, &block)
-					span = TRACER.start_span(name, attributes: attributes.transform_keys(&:to_s))
+					span = TRACER.start_span(name, attributes: attributes&.transform_keys(&:to_s))
 					
 					begin
 						if block.arity.zero?
