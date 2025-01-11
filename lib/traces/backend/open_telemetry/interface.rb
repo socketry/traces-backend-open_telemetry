@@ -50,12 +50,16 @@ module Traces
 				
 				def trace_context(span = ::OpenTelemetry::Trace.current_span)
 					if span_context = span.context
-						state = baggage.values(context: span.context)
+						flags = 0
+						
+						if span_context.trace_flags.sampled?
+							flags |= Context::SAMPLED
+						end
 						
 						return Context.new(
 							span_context.trace_id,
 							span_context.span_id,
-							span_context.trace_flags,
+							flags,
 							span_context.tracestate,
 							remote: span_context.remote?
 						)
