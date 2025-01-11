@@ -95,5 +95,22 @@ describe Traces::Backend::OpenTelemetry do
 				)
 			end
 		end
+		
+		with '#trace_context=' do
+			it "can update trace context" do
+				Traces.trace_context = context
+				
+				span = instance.my_span
+				
+				expect(span.context).to have_attributes(
+					trace_id: be == context.trace_id,
+				)
+				
+				# It seems like OpenTelemetry doesn't really do anything in the testing environment, so we can't really check the parent_id?
+				# expect(span).to have_attributes(
+				# 	parent_id: be == context.parent_id
+				# )
+			end
+		end
 	end
 end
