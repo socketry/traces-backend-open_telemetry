@@ -17,21 +17,7 @@ module Traces
 			
 			module Interface
 				def trace(name, attributes: nil, &block)
-					span = TRACER.start_span(name, attributes: attributes&.transform_keys(&:to_s))
-					
-					begin
-						if block.arity.zero?
-							yield
-						else
-							yield span
-						end
-					rescue Exception => error
-						span&.record_exception(error)
-						span&.status = ::OpenTelemetry::Trace::Status.error("Unhandled exception of type: #{error.class}")
-						raise
-					ensure
-						span&.finish
-					end
+					TRACER.in_span(name, attributes: attributes&.transform_keys(&:to_s), &block)
 				end
 				
 				def trace_context=(context)
@@ -44,8 +30,8 @@ module Traces
 					)
 					
 					span = ::OpenTelemetry::Trace.non_recording_span(span_context)
-					
-					return ::OpenTelemetry::Trace.context_with_span(span)
+					context = ::OpenTelemetry::Trace.context_with_span(span)
+					::OpenTelemetry::Context.attach(context)
 				end
 				
 				def trace_context(span = ::OpenTelemetry::Trace.current_span)

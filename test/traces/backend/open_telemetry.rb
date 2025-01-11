@@ -100,10 +100,9 @@ describe Traces::Backend::OpenTelemetry do
 					trace_id: be == context.trace_id,
 				)
 				
-				# It seems like OpenTelemetry doesn't really do anything in the testing environment, so we can't really check the parent_id?
-				# expect(span).to have_attributes(
-				# 	parent_id: be == context.parent_id
-				# )
+				expect(span).to have_attributes(
+					parent_span_id: be == context.parent_id
+				)
 			end
 		end
 	end
