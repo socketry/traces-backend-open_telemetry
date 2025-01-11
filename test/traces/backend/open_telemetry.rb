@@ -18,6 +18,10 @@ Traces::Provider(MyClass) do
 	def my_method_without_attributes(arguments)
 		Traces.trace("my_method_without_attributes") {}
 	end
+	
+	def my_method_with_exception
+		Traces.trace("my_method_with_exception") {raise "Error"}
+	end
 end
 
 describe Traces::Backend::OpenTelemetry do
@@ -41,5 +45,15 @@ describe Traces::Backend::OpenTelemetry do
 		expect(Traces::Backend::OpenTelemetry::TRACER).to receive(:start_span)
 		
 		instance.my_method_without_attributes(10)
+	end
+	
+	it "can invoke trace wrapper with exception" do
+		instance = MyClass.new
+		
+		expect(Traces::Backend::OpenTelemetry::TRACER).to receive(:start_span)
+		
+		expect do
+			instance.my_method_with_exception
+		end.to raise_exception(RuntimeError, message: be == "Error")
 	end
 end

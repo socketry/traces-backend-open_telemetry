@@ -27,7 +27,7 @@ module Traces
 						end
 					rescue Exception => error
 						span&.record_exception(error)
-						span&.status = ::OpenTelemetry::Traces::Status.error("Unhandled exception of type: #{error.class}")
+						span&.status = ::OpenTelemetry::Trace::Status.error("Unhandled exception of type: #{error.class}")
 						raise
 					ensure
 						span&.finish
@@ -35,10 +35,10 @@ module Traces
 				end
 				
 				def trace_context=(context)
-					span_context = ::OpenTelemetry::Traces::SpanContext.new(
+					span_context = ::OpenTelemetry::Trace::SpanContext.new(
 						trace_id: context.trace_id,
 						span_id: context.parent_id,
-						trace_flags: ::OpenTelemetry::Traces::TracesFlags.from_byte(context.flags),
+						trace_flags: ::OpenTelemetry::Trace::TraceFlags.from_byte(context.flags),
 						tracestate: context.state,
 						remote: context.remote?
 					)
