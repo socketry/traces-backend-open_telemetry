@@ -16,7 +16,7 @@ module Traces
 			TRACER = ::OpenTelemetry.tracer_provider.tracer(Traces::Backend::OpenTelemetry.name, Traces::Backend::OpenTelemetry::VERSION)
 			
 			module Interface
-				def trace(name, attributes: nil, &block)
+				def trace(name, resource: nil, attributes: nil, &block)
 					TRACER.in_span(name, attributes: attributes&.transform_keys(&:to_s), &block)
 				end
 				
