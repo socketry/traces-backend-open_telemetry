@@ -5,7 +5,7 @@
 
 require "opentelemetry"
 
-require "traces/context"
+require_relative "context"
 require_relative "version"
 
 module Traces
@@ -21,20 +21,30 @@ module Traces
 				end
 				
 				def trace_context=(context)
-					span_context = ::OpenTelemetry::Trace::SpanContext.new(
-						trace_id: context.trace_id,
-						span_id: context.parent_id,
-						trace_flags: ::OpenTelemetry::Trace::TraceFlags.from_byte(context.flags),
-						tracestate: context.state,
-						remote: context.remote?
-					)
+					if context.context
+						context = context.context
+					else
+						span_context = ::OpenTelemetry::Trace::SpanContext.new(
+							trace_id: context.trace_id,
+							span_id: context.parent_id,
+							trace_flags: ::OpenTelemetry::Trace::TraceFlags.from_byte(context.flags),
+							tracestate: context.state,
+							remote: context.remote?
+						)
+						
+						span = ::OpenTelemetry::Trace.non_recording_span(span_context)
+						context = ::OpenTelemetry::Trace.context_with_span(span)
+					end
 					
-					span = ::OpenTelemetry::Trace.non_recording_span(span_context)
-					context = ::OpenTelemetry::Trace.context_with_span(span)
 					::OpenTelemetry::Context.attach(context)
 				end
 				
-				def trace_context(span = ::OpenTelemetry::Trace.current_span)
+				def trace_context(span = nil)
+					if span.nil?
+						span = ::OpenTelemetry::Trace.current_span
+						context = ::OpenTelemetry::Context.current
+					end
+					
 					if span_context = span.context
 						flags = 0
 						
@@ -47,7 +57,8 @@ module Traces
 							span_context.span_id,
 							flags,
 							span_context.tracestate,
-							remote: span_context.remote?
+							remote: span_context.remote?,
+							context: context,
 						)
 					end
 				end
