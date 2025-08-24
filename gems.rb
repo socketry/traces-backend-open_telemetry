@@ -7,11 +7,6 @@ source "https://rubygems.org"
 
 gemspec
 
-group :test do
-	gem "console"
-	gem "opentelemetry-sdk"
-end
-
 group :maintenance, optional: true do
 	gem "bake-modernize"
 	gem "bake-gem"
@@ -27,4 +22,7 @@ group :test do
 	
 	gem "bake-test"
 	gem "bake-test-external"
+	
+	gem "opentelemetry-sdk"
+	gem "opentelemetry-exporter-otlp"
 end

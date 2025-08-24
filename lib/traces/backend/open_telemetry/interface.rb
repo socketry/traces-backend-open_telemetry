@@ -21,17 +21,19 @@ module Traces
 				end
 				
 				def trace_context=(context)
-					span_context = ::OpenTelemetry::Trace::SpanContext.new(
-						trace_id: context.trace_id,
-						span_id: context.parent_id,
-						trace_flags: ::OpenTelemetry::Trace::TraceFlags.from_byte(context.flags),
-						tracestate: context.state,
-						remote: context.remote?
-					)
-					
-					span = ::OpenTelemetry::Trace.non_recording_span(span_context)
-					context = ::OpenTelemetry::Trace.context_with_span(span)
-					::OpenTelemetry::Context.attach(context)
+					if context
+						span_context = ::OpenTelemetry::Trace::SpanContext.new(
+							trace_id: context.trace_id,
+							span_id: context.parent_id,
+							trace_flags: ::OpenTelemetry::Trace::TraceFlags.from_byte(context.flags),
+							tracestate: context.state,
+							remote: context.remote?
+						)
+						
+						span = ::OpenTelemetry::Trace.non_recording_span(span_context)
+						context = ::OpenTelemetry::Trace.context_with_span(span)
+						::OpenTelemetry::Context.attach(context)
+					end
 				end
 				
 				def trace_context(span = ::OpenTelemetry::Trace.current_span)
@@ -50,6 +52,40 @@ module Traces
 							remote: span_context.remote?
 						)
 					end
+				end
+				
+				def current_context
+					::OpenTelemetry::Context.current
+				end
+				
+				def with_context(context)
+					if block_given?
+						::OpenTelemetry::Context.with_current(context) do
+							yield
+						end
+					else
+						::OpenTelemetry::Context.attach(context)
+					end
+				end
+				
+				def inject(headers = nil, context = nil)
+					context ||= ::OpenTelemetry::Context.current
+					headers ||= Hash.new
+
+					count = headers.count
+					
+					::OpenTelemetry.propagation.inject(headers, context: context)
+					
+					if count == headers.count
+						# No injection was performed, so return nil:
+						headers = nil
+					end
+					
+					return headers
+				end
+				
+				def extract(headers)
+					::OpenTelemetry.propagation.extract(headers)
 				end
 			end
 		end
