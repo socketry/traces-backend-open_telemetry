@@ -71,7 +71,7 @@ module Traces
 				def inject(headers = nil, context = nil)
 					context ||= ::OpenTelemetry::Context.current
 					headers ||= Hash.new
-
+					
 					count = headers.count
 					
 					::OpenTelemetry.propagation.inject(headers, context: context)

@@ -30,7 +30,7 @@ Traces::Provider(MyClass) do
 	def my_context
 		Traces.trace("my_context") {|span| return Traces.trace_context}
 	end
-
+	
 	def my_span_and_context
 		Traces.trace("my_span_and_context") {|span| return span, Traces.trace_context}
 	end
@@ -93,7 +93,7 @@ describe Traces::Backend::OpenTelemetry do
 		let(:span_and_context) {instance.my_span_and_context}
 		let(:span) {span_and_context.first}
 		let(:context) {span_and_context.last}
-
+		
 		with "#trace_context" do
 			it "has a valid trace id" do
 				expect(context).to have_attributes(

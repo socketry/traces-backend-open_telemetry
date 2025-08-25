@@ -16,6 +16,10 @@ $ bundle add traces-backend-open_telemetry
 $ TRACES_BACKEND=traces/backend/open_telemetry ./my_script.rb
 ```
 
+## Releases
+
+There are no documented releases.
+
 ## Contributing
 
 We welcome contributions to this project.
