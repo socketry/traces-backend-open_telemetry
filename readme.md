@@ -12,13 +12,25 @@ $ bundle add traces-backend-open_telemetry
 
 ## Usage
 
-``` shell
-$ TRACES_BACKEND=traces/backend/open_telemetry ./my_script.rb
-```
+Please see the [project documentation](https://github.com/socketry/traces-backend-open_telemetry) for more details.
+
+  - [Getting Started](https://github.com/socketry/traces-backend-open_telemetryguides/getting-started/index) - This guide explains how to get started with `traces-backend-open_telemetry` to send application traces to OpenTelemetry.
 
 ## Releases
 
-There are no documented releases.
+Please see the [project releases](https://github.com/socketry/traces-backend-open_telemetryreleases/index) for all releases.
+
+### v0.3.0
+
+  - [New Context Propagation Interface](https://github.com/socketry/traces-backend-open_telemetryreleases/index#new-context-propagation-interface)
+
+### v0.2.0
+
+  - Prefer to use `Tracer#in_span`.
+
+### v0.1.0
+
+  - Complete implementation of traces backend for OpenTelemetry.
 
 ## Contributing
 
