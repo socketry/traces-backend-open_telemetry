@@ -20,6 +20,11 @@ Please see the [project documentation](https://github.com/socketry/traces-backen
 
 Please see the [project releases](https://github.com/socketry/traces-backend-open_telemetryreleases/index) for all releases.
 
+### v0.4.0
+
+  - Fixed `Traces.active?` to correctly return `false` when there is no active trace, instead of always returning `true`.
+  - Fixed `Traces.trace_context` to return `nil` when there is no active trace, instead of returning invalid Context objects.
+
 ### v0.3.0
 
   - [New Context Propagation Interface](https://github.com/socketry/traces-backend-open_telemetryreleases/index#new-context-propagation-interface)

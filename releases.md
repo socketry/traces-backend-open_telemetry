@@ -1,6 +1,6 @@
 # Releases
 
-## Unreleased
+## v0.4.0
 
   - Fixed `Traces.active?` to correctly return `false` when there is no active trace, instead of always returning `true`.
   - Fixed `Traces.trace_context` to return `nil` when there is no active trace, instead of returning invalid Context objects.
