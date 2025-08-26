@@ -100,6 +100,16 @@ describe Traces::Backend::OpenTelemetry do
 					trace_id: be != nil
 				)
 			end
+			
+			it "returns nil when there is no active trace" do
+				# Use a new Fiber to create a clean context without any active traces
+				result = Fiber.new do
+					# trace_context should return nil when there's no active trace
+					Traces.trace_context
+				end.resume
+				
+				expect(result).to be_nil
+			end
 		end
 		
 		with "#trace_context=" do
@@ -117,172 +127,201 @@ describe Traces::Backend::OpenTelemetry do
 				)
 			end
 		end
+		
+		with "#active?" do
+			it "returns true when there is an active trace" do
+				Traces.trace("test") do
+					expect(Traces.active?).to be == true
+				end
+			end
+			
+			it "returns false when there is no active trace" do
+				# Use a new Fiber to create a clean context without any active traces
+				result = Fiber.new do
+					Traces.active?
+				end.resume
+				
+				expect(result).to be == false
+			end
+			
+			it "returns false after a trace completes in a new execution context" do
+				Traces.trace("test") do |span|
+					# Should be active inside the trace
+					expect(Traces.active?).to be == true
+				end
+				
+				# In a new Fiber, should not be active
+				result = Fiber.new do
+					Traces.active?
+				end.resume
+				
+				expect(result).to be == false
+			end
+		end
 	end
 	
-	describe "Context Propagation Methods" do
-		with "#current_context" do
-			it "returns current OpenTelemetry context" do
-				current = Traces.current_context
-				expect(current).to be_a(::OpenTelemetry::Context)
-			end
-			
-			it "returns different contexts in different spans" do
-				context1 = nil
-				context2 = nil
-				
-				Traces.trace("span1") do
-					context1 = Traces.current_context
-				end
-				
-				Traces.trace("span2") do
-					context2 = Traces.current_context
-				end
-				
-				# Contexts should be different objects (different spans):
-				expect(context1).not.to be_equal(context2)
-			end
+	with "#current_context" do
+		it "returns current OpenTelemetry context" do
+			current = Traces.current_context
+			expect(current).to be_a(::OpenTelemetry::Context)
 		end
 		
-		with "#with_context" do
-			it "executes block within specified context" do
-				original_context = Traces.current_context
-				test_context = ::OpenTelemetry::Context.empty
-				executed = false
-				
-				Traces.with_context(test_context) do
-					executed = true
-					expect(::OpenTelemetry::Context.current).to be_equal(test_context)
-				end
-				
-				expect(executed).to be == true
-				# Context should be restored after block:
-				expect(::OpenTelemetry::Context.current).to be_equal(original_context)
+		it "returns different contexts in different spans" do
+			context1 = nil
+			context2 = nil
+			
+			Traces.trace("span1") do
+				context1 = Traces.current_context
 			end
 			
-			it "permanently sets context when called without block" do
-				original_context = Traces.current_context
-				test_context = ::OpenTelemetry::Context.empty
-				
-				token = Traces.with_context(test_context)
+			Traces.trace("span2") do
+				context2 = Traces.current_context
+			end
+			
+			# Contexts should be different objects (different spans):
+			expect(context1).not.to be_equal(context2)
+		end
+	end
+	
+	with "#with_context" do
+		it "executes block within specified context" do
+			original_context = Traces.current_context
+			test_context = ::OpenTelemetry::Context.empty
+			executed = false
+			
+			Traces.with_context(test_context) do
+				executed = true
 				expect(::OpenTelemetry::Context.current).to be_equal(test_context)
-				
-				# Clean up by detaching:
-				::OpenTelemetry::Context.detach(token)
 			end
+			
+			expect(executed).to be == true
+			# Context should be restored after block:
+			expect(::OpenTelemetry::Context.current).to be_equal(original_context)
 		end
 		
-		with "#inject" do
-			it "injects trace context into headers" do
-				headers = {}
-				
-				Traces.trace("test") do
-					Traces.inject(headers)
-				end
-				
-				expect(headers).to have_keys(
+		it "permanently sets context when called without block" do
+			original_context = Traces.current_context
+			test_context = ::OpenTelemetry::Context.empty
+			
+			token = Traces.with_context(test_context)
+			expect(::OpenTelemetry::Context.current).to be_equal(test_context)
+			
+			# Clean up by detaching:
+			::OpenTelemetry::Context.detach(token)
+		end
+	end
+	
+	with "#inject" do
+		it "injects trace context into headers" do
+			headers = {}
+			
+			Traces.trace("test") do
+				Traces.inject(headers)
+			end
+			
+			expect(headers).to have_keys(
 					"traceparent" => be_a(String)
 				)
-				
-				traceparent = headers["traceparent"]
-				expect(traceparent).to be =~ /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
-			end
 			
-			it "creates new headers hash when none provided" do
-				Traces.trace("test") do
-					headers = Traces.inject()
-					expect(headers).to be_a(Hash)
-					expect(headers["traceparent"]).to be =~ /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
-				end
-			end
-			
-			it "uses specific context when provided" do
-				headers = {}
-				
-				Traces.trace("test") do
-					specific_context = Traces.current_context
-					Traces.inject(headers, specific_context)
-					expect(headers["traceparent"]).to be =~ /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
-				end
-			end
-			
-			it "returns nil when no headers provided and no active trace" do
-				# Clear any active trace:
-				::OpenTelemetry::Context.clear
-				
-				result = Traces.inject()
-				expect(result).to be == nil
-			end
-			
-			it "returns nil when headers provided but no active trace" do
-				# Clear any active trace:
-				::OpenTelemetry::Context.clear
-				headers = {"existing" => "value"}
-				
-				result = Traces.inject(headers)
-				expect(result).to be == nil
-				# Original headers should remain unchanged:
-				expect(headers["existing"]).to be == "value"
-				expect(headers.key?("traceparent")).to be == false
+			traceparent = headers["traceparent"]
+			expect(traceparent).to be =~ /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
+		end
+		
+		it "creates new headers hash when none provided" do
+			Traces.trace("test") do
+				headers = Traces.inject()
+				expect(headers).to be_a(Hash)
+				expect(headers["traceparent"]).to be =~ /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
 			end
 		end
 		
-		with "#extract" do
-			it "extracts context from headers" do
-				headers = {
+		it "uses specific context when provided" do
+			headers = {}
+			
+			Traces.trace("test") do
+				specific_context = Traces.current_context
+				Traces.inject(headers, specific_context)
+				expect(headers["traceparent"]).to be =~ /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/
+			end
+		end
+		
+		it "returns nil when no headers provided and no active trace" do
+			# Clear any active trace:
+			::OpenTelemetry::Context.clear
+			
+			result = Traces.inject()
+			expect(result).to be == nil
+		end
+		
+		it "returns nil when headers provided but no active trace" do
+			# Clear any active trace:
+			::OpenTelemetry::Context.clear
+			headers = {"existing" => "value"}
+			
+			result = Traces.inject(headers)
+			expect(result).to be == nil
+			# Original headers should remain unchanged:
+			expect(headers["existing"]).to be == "value"
+			expect(headers.key?("traceparent")).to be == false
+		end
+	end
+	
+	with "#extract" do
+		it "extracts context from headers" do
+			headers = {
 					"traceparent" => "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 				}
-				
-				context = Traces.extract(headers)
-				expect(context).to be_a(::OpenTelemetry::Context)
-				
-				# Verify we can use the extracted context:
-				Traces.with_context(context) do
-					span = ::OpenTelemetry::Trace.current_span
-					# Convert binary trace_id to hex for comparison:
-					trace_id_hex = span.context.trace_id.unpack1("H*")
-					expect(trace_id_hex).to be == "4bf92f3577b34da6a3ce929d0e0e4736"
-				end
-			end
 			
-			it "returns original context for invalid headers" do
-				headers = {"traceparent" => "invalid"}
-				original_context = ::OpenTelemetry::Context.current
-				
-				result = Traces.extract(headers)
-				expect(result).to be_equal(original_context)
-			end
+			context = Traces.extract(headers)
+			expect(context).to be_a(::OpenTelemetry::Context)
 			
-			it "handles missing headers gracefully" do
-				headers = {}
-				original_context = ::OpenTelemetry::Context.current
-				
-				result = Traces.extract(headers)
-				expect(result).to be_equal(original_context)
+			# Verify we can use the extracted context:
+			Traces.with_context(context) do
+				span = ::OpenTelemetry::Trace.current_span
+				# Convert binary trace_id to hex for comparison:
+				trace_id_hex = span.context.trace_id.unpack1("H*")
+				expect(trace_id_hex).to be == "4bf92f3577b34da6a3ce929d0e0e4736"
 			end
 		end
 		
-		with "round-trip inject/extract" do
-			it "preserves context through inject and extract cycle" do
-				original_headers = {}
-				
-				# Create a trace and inject it:
-				Traces.trace("test") do
-					Traces.inject(original_headers)
-				end
-				
-				expect(original_headers).to have_keys(
+		it "returns original context for invalid headers" do
+			headers = {"traceparent" => "invalid"}
+			original_context = ::OpenTelemetry::Context.current
+			
+			result = Traces.extract(headers)
+			expect(result).to be_equal(original_context)
+		end
+		
+		it "handles missing headers gracefully" do
+			headers = {}
+			original_context = ::OpenTelemetry::Context.current
+			
+			result = Traces.extract(headers)
+			expect(result).to be_equal(original_context)
+		end
+	end
+	
+	with "round-trip inject/extract" do
+		it "preserves context through inject and extract cycle" do
+			original_headers = {}
+			
+			# Create a trace and inject it:
+			Traces.trace("test") do
+				Traces.inject(original_headers)
+			end
+			
+			expect(original_headers).to have_keys(
 					"traceparent" => be_a(String)
 				)
-				
-				# Extract the context:
-				extracted_context = Traces.extract(original_headers)
-				expect(extracted_context).to be_a(::OpenTelemetry::Context)
-				
-				# Use extracted context to create another trace:
-				Traces.with_context(extracted_context) do
-					span = ::OpenTelemetry::Trace.current_span
-					expect(span.context.remote?).to be == true
-				end
+			
+			# Extract the context:
+			extracted_context = Traces.extract(original_headers)
+			expect(extracted_context).to be_a(::OpenTelemetry::Context)
+			
+			# Use extracted context to create another trace:
+			Traces.with_context(extracted_context) do
+				span = ::OpenTelemetry::Trace.current_span
+				expect(span.context.remote?).to be == true
 			end
 		end
 	end

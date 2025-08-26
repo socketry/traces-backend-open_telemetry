@@ -21,7 +21,7 @@ group :test do
 	gem "sus"
 	gem "covered"
 	gem "decode"
-
+	
 	gem "rubocop"
 	gem "rubocop-socketry"
 	
