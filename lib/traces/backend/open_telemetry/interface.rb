@@ -36,7 +36,15 @@ module Traces
 					end
 				end
 				
+				def active?
+					# Check if there's a real active trace using OpenTelemetry's INVALID span:
+					::OpenTelemetry::Trace.current_span != ::OpenTelemetry::Trace::Span::INVALID
+				end
+				
 				def trace_context(span = ::OpenTelemetry::Trace.current_span)
+					# Return nil if no active trace (using INVALID span check):
+					return nil if span == ::OpenTelemetry::Trace::Span::INVALID
+					
 					if span_context = span.context
 						flags = 0
 						
